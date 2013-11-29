@@ -1,0 +1,62 @@
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Scanner;
+
+
+public class Server {
+	private ServerSocket server;
+	private Socket client;
+	
+public static void main(String[] args){
+	new Server().init();
+}
+
+
+
+public void init(){
+	createConnection();
+	sendMSG();
+	receiveMSG();
+}
+	
+public void createConnection(){
+		try{
+			server = new ServerSocket(10000);
+			client = server.accept();
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+		
+	}
+
+
+public void sendMSG(){
+	Scanner input = new Scanner(System.in);
+	String MSG;
+	try{
+		PrintWriter toClient = new PrintWriter(client.getOutputStream());
+		MSG = input.next();
+		toClient.println(MSG);
+		toClient.flush();
+	}catch(IOException e){
+		e.printStackTrace();
+	}
+	
+}
+
+public void receiveMSG(){
+	try{
+		Scanner fromClient = new Scanner(client.getInputStream());
+		while(fromClient.hasNext()){
+			System.out.println(fromClient.next());
+		}
+	}catch(IOException e){
+		e.printStackTrace();
+	}
+	
+}
+
+
+}
