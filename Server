@@ -1,62 +1,134 @@
+import java.awt.List;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class Server {
 	private ServerSocket server;
-	private Socket client;
+	private BlockingQueue<String> msgQueue;
+	private java.util.List<Socket> clientList = new LinkedList<Socket>();//Collections.synchronizedList(new ArrayList<Socket>());
+
 	
 public static void main(String[] args){
 	new Server().init();
 }
 
-
+public Server(){
+	msgQueue = new LinkedBlockingQueue<>();
+	//clientList = Collections.synchronizedList(new ArrayList<Socket>());
+	
+}
 
 public void init(){
-	createConnection();
-	sendMSG();
-	receiveMSG();
+	notifyAllClient();
+	waitAndConnect();
+	
+	
 }
 	
-public void createConnection(){
+public void waitAndConnect(){
+		Socket client;
 		try{
 			server = new ServerSocket(10000);
-			client = server.accept();
+			while(true){
+				client = server.accept();
+				clientList.add(client);
+				receiveMSG(client);
+			}
+			
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+	}
+
+
+synchronized public void notifyAllClient(){
+	Thread notify = new Thread(new notifyAll());
+	notify.start();
+}
+
+class notifyAll implements Runnable{
+	private PrintWriter toclient;
+	@Override
+	public void run() {
+		while(true){
+			while(!msgQueue.isEmpty()){
+				String tt = "";
+				try {
+					tt = msgQueue.take();
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				for(int i=0;i<clientList.size();i++){
+					try{
+						
+						Socket tempClient = clientList.get(i);
+						if(tempClient.isBound()){
+							toclient = new PrintWriter(tempClient.getOutputStream());
+							toclient.println(tt);
+							toclient.flush();
+						}else{
+							System.out.println("Someone disconnect!");
+							clientList.remove(i);
+						}
+						
+					}catch(IOException e){
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		
+		
+	}
+	
+}
+
+
+synchronized public void receiveMSG(Socket conClient){
+	
+	Thread receive = new Thread(new ClientReceive(conClient));
+	receive.start();
+	
+}
+
+class ClientReceive implements Runnable{
+	
+	private Scanner fromClient;
+	public ClientReceive(Socket client){
+		try{
+			fromClient = new Scanner(client.getInputStream());
 		}catch(IOException e){
 			e.printStackTrace();
 		}
 		
 	}
 
-
-public void sendMSG(){
-	Scanner input = new Scanner(System.in);
-	String MSG;
-	try{
-		PrintWriter toClient = new PrintWriter(client.getOutputStream());
-		MSG = input.next();
-		toClient.println(MSG);
-		toClient.flush();
-	}catch(IOException e){
-		e.printStackTrace();
-	}
-	
-}
-
-public void receiveMSG(){
-	try{
-		Scanner fromClient = new Scanner(client.getInputStream());
-		while(fromClient.hasNext()){
-			System.out.println(fromClient.next());
+	@Override
+	public void run() {
+		while(true){
+			String MSG;
+			if((MSG=fromClient.nextLine())!=null){
+				try {
+					msgQueue.put(MSG);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			
 		}
-	}catch(IOException e){
-		e.printStackTrace();
+		
+		
 	}
-	
 }
-
 
 }
