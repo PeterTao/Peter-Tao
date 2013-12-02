@@ -1,55 +1,126 @@
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.util.Scanner;
-
-
-public class Client {
-	private Socket connect;
-	
-	public static void main(String[] args){
-		new Client().init();
-	}
-	
-	public void init(){
-		createConnection();
-		sendMSG();
-		receiveMSG();
-	}
-	
-	public void createConnection(){
-		try{
-			connect = new Socket("127.0.0.1",10000);
-		}catch(IOException e){
-			e.printStackTrace();
-		}
-	}
-	public void sendMSG(){
-		Scanner input = new Scanner(System.in);
-		PrintWriter toServer;
-		try{
-			toServer = new PrintWriter(connect.getOutputStream());
-			while(input.hasNext()){
-				String MSG = input.next();
-				toServer.println(MSG);
-				toServer.flush();
+import java.io.*;  
+import java.net.*;  
+import javax.swing.*;  
+import java.awt.*;  
+import java.awt.event.*;
+import java.util.*;  
+ 
+  
+public class SimpleChatClient {  
+      private JTextArea inputArea, showArea;
+      private PrintWriter toServer;
+      private Socket server;
+      private static String name;
+      
+      public static void main(String[] args)
+		throws java.io.IOException
+      {
+    	  	name = JOptionPane.showInputDialog("pleas input the client name");
+			String host = args[0];
+			int port = Integer.parseInt(args[1]);
+			new SimpleChatClient().go(host,port);
+			
+		
+	  }
+	  
+	 
+      
+      public void go(String host,int port){
+		  //initial GUI and client-server thing
+		  
+		
+				
+		setNetService(host,port);
+		EventQueue.invokeLater(new Runnable(){
+			public void run(){
+				setGUI();
+				}
+			});
+		readFromServer();
+	  } 
+	  
+      
+      
+	 public void setGUI(){
+		JFrame mainFrame = new JFrame("name");
+		JPanel topPanel = new JPanel();
+		JPanel botPanel = new JPanel();
+		JButton send = new JButton("send");
+		
+		inputArea = new JTextArea(" ",2,20);
+		inputArea.setLineWrap(true);
+		inputArea.setWrapStyleWord(true);
+		
+		showArea = new JTextArea(" ",20,25);
+		showArea.setLineWrap(true);
+		showArea.setWrapStyleWord(true);
+		showArea.setEditable(false);
+		
+		JScrollPane scrollpane = new JScrollPane(showArea);
+		
+		topPanel.add(inputArea);
+		topPanel.add(send);
+		botPanel.add(scrollpane);
+		
+		mainFrame.setLayout(new BorderLayout());
+		mainFrame.add(BorderLayout.NORTH, topPanel);
+		mainFrame.add(BorderLayout.CENTER, botPanel);
+		
+		send.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e){
+				//try{
+					if((inputArea.getText()) != null){
+						//send the message from client to server when press the button
+						showArea.append(name+":"+inputArea.getText()+"\n");
+						toServer.println(name+":"+inputArea.getText());
+						toServer.flush();
+					}
+					
+					inputArea.setText(null);
+				//}catch(IOException err){
+				//	err.printStackTrace();
+				//}
 			}
-
-		}catch(IOException e){
-			e.printStackTrace();
-		}
-	}
-
-	public void receiveMSG(){
-		try{
-			Scanner fromServer = new Scanner(connect.getInputStream());	
-			while(fromServer.hasNext()){
-				System.out.println(fromServer.next());
-			}
+		});
+			
+		
+		mainFrame.pack();
+		mainFrame.setVisible(true);
+		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		
+	 }
+	  
+	public void setNetService(String host,int port){
+		try{			
+			//connect localhost through port 10000
+			
+			server = new Socket(host, port);		
+			toServer = new PrintWriter(server.getOutputStream());
+			
+			
+		}catch(ConnectException e){
+			System.out.println("cannot connect to the server!");
+			System.exit(0);
 		}catch(IOException e){
 			e.printStackTrace();
 		}
 		
+	}
+	public void readFromServer(){
+		Scanner fromServer;
+		String message;
+		try{
+			fromServer = new Scanner(server.getInputStream());
+			while((message = fromServer.nextLine()) != null){
+				showArea.append(message+"\n");
+			}
+			
+		}catch(IOException e){
+			e.printStackTrace();
+		}
 		
 	}
+	
+
 }
